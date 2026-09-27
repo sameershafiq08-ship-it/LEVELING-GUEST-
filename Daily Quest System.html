@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Quest System</title>
+<style>
+:root{
+  --bg:#05070f; --bg2:#0a0e1a; --panel:#0d1220; --border:#243055;
+  --text:#dbe4ff; --muted:#7a88b3; --accent:#5b7cff; --accent2:#9b6bff;
+  --glow:0 0 20px rgba(91,124,255,.35); --danger:#ff4d6d; --success:#3ee6a8; --gold:#ffc94d;
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){--bg:#eef1fb;--bg2:#e4e9fb;--panel:#fff;--border:#c7d0f0;--text:#151a33;--muted:#5b6588;--accent:#3e5cf0;--accent2:#8347e6;--glow:0 0 20px rgba(62,92,240,.2);}
+}
+:root[data-theme="light"]{--bg:#eef1fb;--bg2:#e4e9fb;--panel:#fff;--border:#c7d0f0;--text:#151a33;--muted:#5b6588;--accent:#3e5cf0;--accent2:#8347e6;--glow:0 0 20px rgba(62,92,240,.2);}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0;min-height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:radial-gradient(circle at 50% 0%,var(--bg2),var(--bg) 70%);color:var(--text);
+  padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(70px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;}
+.wrap{width:100%;max-width:480px;}
+header{text-align:center;margin-bottom:16px;}
+.sys-tag{font-size:11px;letter-spacing:4px;color:var(--accent);font-weight:700;}
+h1{margin:6px 0 4px;font-size:24px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.sub{color:var(--muted);font-size:12px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:var(--glow);}
+.page{display:none;} .page.active{display:block;}
+
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;z-index:40;
+  padding-bottom:env(safe-area-inset-bottom,0px);background:linear-gradient(0deg,var(--bg) 60%,transparent);}
+.navbar{display:flex;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:6px;margin:10px;width:100%;max-width:460px;box-shadow:var(--glow);}
+.navbtn{flex:1;text-align:center;padding:8px 4px;border-radius:12px;cursor:pointer;font-size:11px;color:var(--muted);font-weight:600;}
+.navbtn .ic{font-size:17px;display:block;}
+.navbtn.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;}
+
+.level-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.level-badge{display:flex;align-items:center;gap:10px;}
+.level-circle{width:46px;height:46px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--xp-pct,0)*1%),var(--border) 0);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;position:relative;}
+.level-circle::before{content:"";position:absolute;inset:4px;background:var(--panel);border-radius:50%;}
+.level-circle span{position:relative;z-index:1;}
+.level-info .rank{font-size:11px;color:var(--muted);letter-spacing:1px;}
+.level-info .name{font-weight:700;}
+.streak{text-align:right;font-size:12px;color:var(--muted);}
+.streak b{color:var(--success);font-size:16px;display:block;}
+.xp-bar{height:8px;border-radius:6px;background:var(--border);overflow:hidden;margin-top:8px;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .4s;}
+
+.quest-title{font-size:11px;color:var(--muted);letter-spacing:2px;margin:0 0 10px 2px;font-weight:700;}
+.quest{display:flex;align-items:center;gap:12px;padding:12px 10px;border-radius:12px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg2);}
+.quest.done{opacity:.55;}
+.quest .check{width:26px;height:26px;border-radius:7px;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:15px;color:var(--accent);}
+.quest.done .check{background:var(--success);border-color:var(--success);color:#04140d;}
+.quest .info{flex:1;} .quest .info .qname{font-weight:600;font-size:14px;} .quest .info .qtarget{font-size:11px;color:var(--muted);margin-top:2px;}
+.quest.done .qname{text-decoration:line-through;}
+.stepper{display:flex;align-items:center;gap:6px;}
+.stepper button{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:15px;cursor:pointer;}
+.stepper .val{min-width:30px;text-align:center;font-size:12px;font-weight:700;}
+.add-row{display:flex;gap:8px;margin-top:4px;}
+.add-row input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:9px 10px;color:var(--text);font-size:13px;}
+.add-row button{background:var(--accent);border:none;color:#fff;border-radius:10px;padding:0 14px;font-weight:700;cursor:pointer;}
+.btn-row{display:flex;gap:10px;margin-top:14px;}
+.btn{flex:1;padding:12px;border-radius:12px;border:none;font-weight:700;cursor:pointer;font-size:13.5px;}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;box-shadow:var(--glow);}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.penalty{border:1px solid var(--danger);background:rgba(255,77,109,.08);color:var(--danger);padding:10px 12px;border-radius:12px;font-size:12px;text-align:center;margin-bottom:14px;display:none;}
+.penalty.show{display:block;}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+.stat-box .num{font-size:20px;font-weight:800;color:var(--accent);}
+.stat-box .lbl{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.history{display:flex;gap:4px;align-items:flex-end;height:90px;margin-top:6px;}
+.hbar{flex:1;background:var(--border);border-radius:4px 4px 0 0;position:relative;min-height:4px;}
+.hbar.full{background:linear-gradient(180deg,var(--accent2),var(--accent));}
+.hlabels{display:flex;gap:4px;margin-top:4px;}
+.hlabels span{flex:1;text-align:center;font-size:8.5px;color:var(--muted);}
+
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ach{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;opacity:.35;}
+.ach.unlocked{opacity:1;border-color:var(--gold);box-shadow:0 0 14px rgba(255,201,77,.25);}
+.ach .aic{font-size:26px;} .ach .an{font-weight:700;font-size:12.5px;margin-top:4px;} .ach .ad{font-size:10px;color:var(--muted);margin-top:2px;}
+
+.avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 12px;box-shadow:var(--glow);}
+.pf-row{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border);font-size:13px;}
+.pf-row:last-child{border-bottom:none;}
+.pf-row .k{color:var(--muted);} .pf-row .v{font-weight:700;}
+.name-edit{width:100%;text-align:center;font-size:17px;font-weight:800;background:transparent;border:none;color:var(--text);border-bottom:1px dashed var(--border);padding:6px;margin-bottom:4px;}
+
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--panel);border:1px solid var(--accent);color:var(--text);padding:10px 18px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;box-shadow:var(--glow);z-index:50;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+footer{text-align:center;color:var(--muted);font-size:10.5px;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="sys-tag">- SYSTEM -</div>
+    <h1>Daily Quest</h1>
+    <div class="sub">Roz complete karo, warna Penalty Zone tayyar hai.</div>
+  </header>
+
+  <div class="penalty" id="penalty">⚠️ Kal ki quest incomplete rahi — Penalty Zone activated. Streak reset ho gayi.</div>
+
+  <div class="page active" id="page-home">
+    <div class="card">
+      <div class="level-row">
+        <div class="level-badge">
+          <div class="level-circle" id="levelCircle"><span id="levelNum">1</span></div>
+          <div class="level-info">
+            <div class="rank" id="rankTag">HUNTER RANK · E</div>
+            <div class="name" id="homeName">Hunter</div>
+          </div>
+        </div>
+        <div class="streak"><span>🔥 Streak</span><b id="streakNum">0</b></div>
+      </div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+    </div>
+    <div class="card">
+      <div class="quest-title">TODAY'S DAILY QUEST</div>
+      <div id="questList"></div>
+      <div class="add-row">
+        <input id="newQuestName" placeholder="Custom task add karo">
+        <button onclick="addQuest()">+</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="completeAll()">Complete All</button>
+        <button class="btn ghost" onclick="resetToday()">Reset Today</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-gym">
+    <div class="card">
+      <div class="quest-title" id="gymDayTitle">TODAY'S WORKOUT</div>
+      <div id="gymExList"></div>
+    </div>
+    <div class="card">
+      <div class="quest-title">WEEKLY GYM COURSE</div>
+      <div id="gymWeekList"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-stats">
+    <div class="card">
+      <div class="quest-title">OVERVIEW</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num" id="statLevel">1</div><div class="lbl">Level</div></div>
+        <div class="stat-box"><div class="num" id="statBest">0</div><div class="lbl">Best Streak</div></div>
+        <div class="stat-box"><div class="num" id="statDays">0</div><div class="lbl">Days Completed</div></div>
+        <div class="stat-box"><div class="num" id="statXp">0</div><div class="lbl">Total XP</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="quest-title">LAST 7 DAYS</div>
+      <div class="history" id="historyBars"></div>
+      <div class="hlabels" id="historyLabels"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-ach">
+    <div class="card">
+      <div class="quest-title">ACHIEVEMENTS</div>
+      <div class="ach-grid" id="achGrid"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-profile">
+    <div class="card" style="text-align:center;">
+      <div class="avatar" id="avatarBox">🗡️</div>
+      <input class="name-edit" id="nameInput" placeholder="Apna naam likho" oninput="saveName()">
+      <div class="sub" id="rankFull">Rank E Hunter</div>
+    </div>
+    <div class="card">
+      <div class="pf-row"><span class="k">Level</span><span class="v" id="pfLevel">1</span></div>
+      <div class="pf-row"><span class="k">Total XP Earned</span><span class="v" id="pfXp">0</span></div>
+      <div class="pf-row"><span class="k">Current Streak</span><span class="v" id="pfStreak">0</span></div>
+      <div class="pf-row"><span class="k">Best Streak</span><span class="v" id="pfBest">0</span></div>
+      <div class="pf-row"><span class="k">Awakened Since</span><span class="v" id="pfJoin">-</span></div>
+    </div>
+    <div class="btn-row"><button class="btn ghost" onclick="hardReset()">⚠️ Reset Everything</button></div>
+  </div>
+
+  <footer>Data sirf is browser mein save hoti hai, kahin bhejta nahi.</footer>
+</div>
+
+<nav><div class="navbar">
+  <div class="navbtn active" data-p="home" onclick="showPage('home')"><span class="ic">🏠</span>Home</div>
+  <div class="navbtn" data-p="stats" onclick="showPage('stats')"><span class="ic">📊</span>Stats</div>
+  <div class="navbtn" data-p="gym" onclick="showPage('gym')"><span class="ic">🏋️</span>Gym</div>
+  <div class="navbtn" data-p="ach" onclick="showPage('ach')"><span class="ic">🏆</span>Badges</div>
+  <div class="navbtn" data-p="profile" onclick="showPage('profile')"><span class="ic">👤</span>Profile</div>
+</div></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_QUESTS=[
+ {id:'pushups',name:'Push-ups',target:100,unit:'reps',step:10},
+ {id:'situps',name:'Sit-ups',target:100,unit:'reps',step:10},
+ {id:'abs',name:'Abs Workout',target:50,unit:'reps',step:10},
+ {id:'squats',name:'Squats',target:100,unit:'reps',step:10},
+ {id:'run',name:'Running',target:10,unit:'km',step:1},
+ {id:'water',name:'Water Intake',target:8,unit:'glasses',step:1},
+ {id:'read',name:'Reading / Study',target:30,unit:'mins',step:5},
+ {id:'meditate',name:'Meditation',target:10,unit:'mins',step:5},
+ {id:'sleep8',name:'Sleep on time',target:1,unit:'done',step:1},
+ {id:'gym',name:"Gym Workout (Gym tab dekho)",target:1,unit:'session',step:1},
+];
+const RANKS=[[1,'E'],[5,'D'],[10,'C'],[16,'B'],[23,'A'],[30,'S']];
+const ACHIEVEMENTS=[
+ {id:'a1',ic:'🔥',n:'3-Day Streak',d:'3 din lagatar',check:s=>s.streak>=3||s.bestStreak>=3},
+ {id:'a2',ic:'⚡',n:'7-Day Streak',d:'1 hafta pura',check:s=>s.streak>=7||s.bestStreak>=7},
+ {id:'a3',ic:'👑',n:'30-Day Streak',d:'1 mahina pura',check:s=>s.streak>=30||s.bestStreak>=30},
+ {id:'a4',ic:'🆙',n:'Level 5',d:'Level 5 tak pahuncho',check:s=>s.level>=5},
+ {id:'a5',ic:'💪',n:'Level 10',d:'Level 10 tak pahuncho',check:s=>s.level>=10},
+ {id:'a6',ic:'🌑',n:'Shadow Monarch',d:'Level 20 tak pahuncho',check:s=>s.level>=20},
+ {id:'a7',ic:'✅',n:'First Quest',d:'Pehli quest complete',check:s=>s.totalDaysDone>=1},
+ {id:'a8',ic:'📅',n:'30 Quests Done',d:'30 din complete kiye',check:s=>s.totalDaysDone>=30},
+];
+
+const GYM_PROGRAM=[
+ {day:'Monday',title:'Push Day (Chest, Shoulders, Triceps)',ex:[
+   {n:'Bench Press / Push-ups',s:'4 x 10'},{n:'Shoulder Press',s:'3 x 12'},
+   {n:'Incline Dumbbell Press',s:'3 x 12'},{n:'Tricep Dips',s:'3 x 15'},{n:'Lateral Raises',s:'3 x 15'}]},
+ {day:'Tuesday',title:'Pull Day (Back, Biceps)',ex:[
+   {n:'Pull-ups / Lat Pulldown',s:'4 x 8'},{n:'Bent-over Rows',s:'3 x 12'},
+   {n:'Deadlift (light)',s:'3 x 8'},{n:'Bicep Curls',s:'3 x 15'},{n:'Face Pulls',s:'3 x 15'}]},
+ {day:'Wednesday',title:'Leg Day',ex:[
+   {n:'Squats',s:'4 x 10'},{n:'Lunges',s:'3 x 12/side'},
+   {n:'Leg Press',s:'3 x 12'},{n:'Calf Raises',s:'4 x 20'},{n:'Plank',s:'3 x 1 min'}]},
+ {day:'Thursday',title:'Active Recovery / Cardio',ex:[
+   {n:'Jogging / Cycling',s:'25 mins'},{n:'Stretching',s:'15 mins'},
+   {n:'Core Circuit',s:'3 rounds'}]},
+ {day:'Friday',title:'Push Day (Repeat, heavier)',ex:[
+   {n:'Bench Press / Push-ups',s:'4 x 12'},{n:'Shoulder Press',s:'4 x 10'},
+   {n:'Incline Dumbbell Press',s:'3 x 10'},{n:'Tricep Dips',s:'3 x 15'},{n:'Lateral Raises',s:'3 x 15'}]},
+ {day:'Saturday',title:'Pull + Legs Combo',ex:[
+   {n:'Deadlift',s:'4 x 8'},{n:'Pull-ups',s:'3 x 8'},
+   {n:'Squats',s:'3 x 10'},{n:'Bicep Curls',s:'3 x 15'}]},
+ {day:'Sunday',title:'Rest Day',ex:[{n:'Light walk / Full stretch',s:'20 mins'},{n:'Recovery & Sleep',s:'8 hrs'}]},
+];
+
+function loadState(){
+  try{const raw=localStorage.getItem('dq_state_v2'); if(raw) return JSON.parse(raw);}catch(e){}
+  return {quests:DEFAULT_QUESTS.map(q=>({...q,progress:0})),level:1,xp:0,totalXp:0,streak:0,bestStreak:0,
+    lastCompleteDate:null,lastCheckDate:null,totalDaysDone:0,history:{},name:'Hunter',joinDate:todayStr(),gymProgress:{}};
+}
+function saveState(){ try{localStorage.setItem('dq_state_v2',JSON.stringify(state));}catch(e){} }
+let state=loadState();
+function todayStr(){return new Date().toISOString().slice(0,10);}
+
+function checkPenalty(){
+  const today=todayStr();
+  if(state.lastCheckDate && state.lastCheckDate!==today){
+    const wasComplete=state.lastCompleteDate===state.lastCheckDate;
+    if(!wasComplete){ state.streak=0; document.getElementById('penalty').classList.add('show'); }
+    state.quests.forEach(q=>q.progress=0);
+  }
+  state.lastCheckDate=today; saveState();
+}
+function xpForLevel(l){return 100+(l-1)*40;}
+function rankForLevel(l){let r='E'; for(const [lv,tag] of RANKS){ if(l>=lv) r=tag; } return r;}
+
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.navbtn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelector('.navbtn[data-p="'+p+'"]').classList.add('active');
+  if(p==='gym') renderGym();
+  if(p==='stats') renderStats();
+  if(p==='ach') renderAch();
+  if(p==='profile') renderProfile();
+}
+
+function render(){
+  const list=document.getElementById('questList'); list.innerHTML='';
+  state.quests.forEach(q=>{
+    const done=q.progress>=q.target;
+    const div=document.createElement('div');
+    div.className='quest'+(done?' done':'');
+    div.innerHTML=`<div class="check" onclick="toggleDone('${q.id}')">${done?'✓':''}</div>
+      <div class="info"><div class="qname">${q.name}</div><div class="qtarget">${q.progress}/${q.target} ${q.unit}</div></div>
+      <div class="stepper"><button onclick="step('${q.id}',-1)">−</button><div class="val">${q.progress}</div><button onclick="step('${q.id}',1)">+</button></div>`;
+    list.appendChild(div);
+  });
+  document.getElementById('levelNum').textContent=state.level;
+  document.getElementById('streakNum').textContent=state.streak;
+  document.getElementById('rankTag').textContent='HUNTER RANK · '+rankForLevel(state.level);
+  document.getElementById('homeName').textContent=state.name||'Hunter';
+  const need=xpForLevel(state.level); const pct=Math.min(100,Math.round((state.xp/need)*100));
+  document.getElementById('xpFill').style.width=pct+'%';
+  document.getElementById('levelCircle').style.setProperty('--xp-pct',pct);
+}
+
+function renderGym(){
+  const today=todayStr();
+  const dow=new Date().getDay(); // 0=Sun
+  const idx=(dow+6)%7; // Monday-first index
+  const todayPlan=GYM_PROGRAM[idx];
+  document.getElementById('gymDayTitle').textContent="TODAY'S WORKOUT · "+todayPlan.title.toUpperCase();
+  if(!state.gymProgress[today]) state.gymProgress[today]={};
+  const list=document.getElementById('gymExList'); list.innerHTML='';
+  todayPlan.ex.forEach((ex,i)=>{
+    const done=!!state.gymProgress[today][i];
+    const div=document.createElement('div'); div.className='quest'+(done?' done':'');
+    div.innerHTML=`<div class="check" onclick="toggleGymEx(${i})">${done?'✓':''}</div>
+      <div class="info"><div class="qname">${ex.n}</div><div class="qtarget">${ex.s}</div></div>`;
+    list.appendChild(div);
+  });
+  const week=document.getElementById('gymWeekList'); week.innerHTML='';
+  GYM_PROGRAM.forEach((d,i)=>{
+    const row=document.createElement('div'); row.className='pf-row';
+    row.innerHTML=`<span class="k">${d.day}${i===idx?' (Today)':''}</span><span class="v">${d.title}</span>`;
+    week.appendChild(row);
+  });
+}
+function toggleGymEx(i){
+  const today=todayStr();
+  if(!state.gymProgress[today]) state.gymProgress[today]={};
+  state.gymProgress[today][i]=!state.gymProgress[today][i];
+  const dow=new Date().getDay(); const idx=(dow+6)%7; const plan=GYM_PROGRAM[idx];
+  const allDone=plan.ex.every((_,j)=>state.gymProgress[today][j]);
+  const gymQuest=state.quests.find(q=>q.id==='gym');
+  if(gymQuest) gymQuest.progress = allDone?1:0;
+  saveState(); renderGym(); render(); maybeCompleteDay();
+}
+
+function renderStats(){
+  document.getElementById('statLevel').textContent=state.level;
+  document.getElementById('statBest').textContent=state.bestStreak;
+  document.getElementById('statDays').textContent=state.totalDaysDone;
+  document.getElementById('statXp').textContent=state.totalXp;
+  const bars=document.getElementById('historyBars'); const labels=document.getElementById('historyLabels');
+  bars.innerHTML=''; labels.innerHTML='';
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=d.toISOString().slice(0,10);
+    const done = state.history[key] ? state.history[key].pct : (key===todayStr() ? Math.round(100*state.quests.filter(q=>q.progress>=q.target).length/state.quests.length) : 0);
+    const div=document.createElement('div');
+    div.className='hbar'+(done>=100?' full':'');
+    div.style.height=Math.max(4,done)+'%';
+    div.title=done+'%';
+    bars.appendChild(div);
+    const lb=document.createElement('span'); lb.textContent=['S','M','T','W','T','F','S'][d.getDay()];
+    labels.appendChild(lb);
+  }
+}
+
+function renderAch(){
+  const grid=document.getElementById('achGrid'); grid.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const unlocked=a.check(state);
+    const div=document.createElement('div');
+    div.className='ach'+(unlocked?' unlocked':'');
+    div.innerHTML=`<div class="aic">${a.ic}</div><div class="an">${a.n}</div><div class="ad">${a.d}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+function renderProfile(){
+  document.getElementById('nameInput').value=state.name||'';
+  document.getElementById('rankFull').textContent='Rank '+rankForLevel(state.level)+' Hunter';
+  document.getElementById('pfLevel').textContent=state.level;
+  document.getElementById('pfXp').textContent=state.totalXp;
+  document.getElementById('pfStreak').textContent=state.streak;
+  document.getElementById('pfBest').textContent=state.bestStreak;
+  document.getElementById('pfJoin').textContent=state.joinDate;
+}
+function saveName(){ state.name=document.getElementById('nameInput').value.trim()||'Hunter'; saveState(); document.getElementById('homeName').textContent=state.name; }
+
+function step(id,dir){
+  const q=state.quests.find(x=>x.id===id); if(!q) return;
+  q.progress=Math.max(0,Math.min(q.target,q.progress+dir*q.step));
+  saveState(); render(); maybeCompleteDay();
+}
+function toggleDone(id){
+  const q=state.quests.find(x=>x.id===id); if(!q) return;
+  q.progress=q.progress>=q.target?0:q.target;
+  saveState(); render(); maybeCompleteDay();
+}
+function completeAll(){ state.quests.forEach(q=>q.progress=q.target); saveState(); render(); maybeCompleteDay(); }
+function resetToday(){ state.quests.forEach(q=>q.progress=0); saveState(); render(); }
+
+function maybeCompleteDay(){
+  const allDone=state.quests.every(q=>q.progress>=q.target);
+  const today=todayStr();
+  if(allDone && state.lastCompleteDate!==today){
+    state.lastCompleteDate=today; state.streak+=1; state.totalDaysDone+=1;
+    if(state.streak>state.bestStreak) state.bestStreak=state.streak;
+    state.history[today]={pct:100};
+    state.xp+=40; state.totalXp+=40;
+    document.getElementById('penalty').classList.remove('show');
+    let need=xpForLevel(state.level); let leveled=false;
+    while(state.xp>=need){ state.xp-=need; state.level+=1; need=xpForLevel(state.level); leveled=true; }
+    if(leveled) showToast('🆙 Level Up! Ab Level '+state.level); else showToast('✅ Quest Complete! +40 XP');
+    saveState(); render();
+  }
+}
+
+let toastTimer;
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200); }
+
+function addQuest(){
+  const input=document.getElementById('newQuestName'); const name=input.value.trim(); if(!name) return;
+  state.quests.push({id:'c'+Date.now(),name,target:1,unit:'done',progress:0,step:1});
+  input.value=''; saveState(); render();
+}
+function hardReset(){
+  if(!confirm('Sab data delete ho jayega. Pakka?')) return;
+  localStorage.removeItem('dq_state_v2'); state=loadState(); saveState(); render(); showPage('home');
+}
+
+checkPenalty();
+render();
+</script>
+</body>
+</html>
